@@ -6,6 +6,7 @@
 			<button @click="timerRecord">start record(10s)</button>
 			<button @click="startRecord(true)">start timeSliceMode(3s)</button>
 			<button @click="stopRecord">stop record</button>
+			<button @click="sendMessage">sendMessage</button>
 			<div>select Bitrate</div>
 			<select v-model="selected">
 				<option v-for="(option, idx) in bitrateList" :key="idx" :value="option.value">{{ option.key }}</option>
@@ -18,6 +19,9 @@
 
 <script>
 import RecordRTC from "recordrtc";
+import io from 'socket.io-client';
+ 
+
 export default {
 	data() {
 		return {
@@ -67,7 +71,8 @@ export default {
 					key: "4.5Mbit/s - YouTube 1280p",
 					value: 4500000
 				}
-			]
+			],
+			socket:null
 		};
 	},
 	components: {},
@@ -77,7 +82,10 @@ export default {
 				audio: true,
 				video: { width: 1280, height: 720 }
 			};
-
+			this.socket = io('http://localhost:8080');
+			this.socket.on('recMsg', function (data) {
+				console.log(data.comment)
+			});
 			try {
 				this.stream = await navigator.mediaDevices.getUserMedia(constraints);
 			} catch (err) {
@@ -122,7 +130,11 @@ export default {
 			const sleep = m => new Promise(r => setTimeout(r, m));
 			await sleep(10000);
 			this.stopRecord();
+		},
+		sendMessage(){
+			this.socket.emit("msg", {comment: 'hi'});
 		}
+		
 	},
 	created() {
 		this.init();
