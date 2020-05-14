@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<h1>SampleVideo 720p(1280x720) {{status}} </h1>
+		<h1>SampleVideo 720p(1280x720) {{status}}</h1>
 		<h2 v-if="blobCount > 0">Blob Chunk Count : {{blobCount}}</h2>
 		<div>
 			<fieldset>
@@ -20,6 +20,8 @@
 				>SERVER - start timeSliceMode And Merge Chunk</button>
 				timeslice ms
 				<input v-model="timeSliceValue" placeholder="timeslice second(ms)" />
+				end Timer ->
+				<input v-model="endTimer" placeholder="end timer" />
 			</fieldset>
 
 			<fieldset>
@@ -27,6 +29,11 @@
 				<button @click="stopRecord($event, timeslice = false)">stop record</button>
 				<button @click="stopRecord($event, timeslice = true)">stop timeSliceMode</button>
 				<button @click="sendMessage">sendMessage</button>
+			</fieldset>
+
+			<fieldset>
+				<legend>Special Button</legend>
+				<button @click="recordOneHour">Record One Hour</button>
 			</fieldset>
 
 			<div>select Bitrate</div>
@@ -53,6 +60,7 @@ export default {
 			chunkEnd: false,
 			blobCount: 0,
 			timeSliceValue: 5000,
+			endTimer: 0,
 			bitrateList: [
 				{
 					key: "16kbit/s - 화상전화 품질",
@@ -135,7 +143,7 @@ export default {
 			};
 
 			if (timeSliceMode) {
-				option.timeSlice = Number.parseInt(this.timeSliceValue,10);
+				option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
 				option.onTimeStamp = timestamp => {
 					console.log(timestamp);
 				};
@@ -168,7 +176,6 @@ export default {
 			}
 		},
 		startRecordSaveChunk() {
-
 			//reset
 			this.status = "Recording";
 			this.chunkEnd = false;
@@ -180,7 +187,7 @@ export default {
 				mimeType: "video/webm"
 			};
 
-			option.timeSlice = Number.parseInt(this.timeSliceValue,10);
+			option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
 			option.onTimeStamp = timestamp => {
 				console.log(timestamp);
 			};
@@ -214,10 +221,7 @@ export default {
 					type: "video/webm"
 				});
 
-				RecordRTC.invokeSaveAsDialog(
-					blob,
-					"test : bitrate" + this.selected
-				);
+				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
 			}
 		},
 		async timerRecord() {
@@ -225,6 +229,43 @@ export default {
 			const sleep = m => new Promise(r => setTimeout(r, m));
 			await sleep(10000);
 			this.stopRecord();
+		},
+		async recordOneHour() {
+			this.status = "Recording";
+			this.chunkEnd = false;
+			let option = {
+				type: "video",
+				bitsPerSecond: this.selected,
+				mimeType: "video/webm"
+			};
+
+			option.timeSlice = Number.parseInt(60000, 10);
+			option.onTimeStamp = timestamp => {
+				console.log(timestamp);
+			};
+
+			option.ondataavailable = blob => {
+				console.log("ondataavailable blob:: ", blob);
+				if (this.status === "Stopped") {
+					this.chunkEnd = true;
+				}
+				this.socket.emit("media_chunk", {
+					chunkIndex: this.blobCount,
+					chunk: blob,
+					isEnd: this.chunkEnd
+				});
+				this.blobCount++;
+			};
+
+			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
+				this.stream,
+				option
+			);
+			this.recorder.startRecording();
+
+			const sleep = m => new Promise(r => setTimeout(r, m));
+			await sleep(3600000);
+			this.stopRecord(null, true);
 		},
 		sendMessage() {
 			this.socket.emit("msg", { comment: "hi" });
