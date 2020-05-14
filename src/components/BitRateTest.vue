@@ -36,6 +36,11 @@
 				<button @click="recordOneHour">Record One Hour</button>
 			</fieldset>
 
+			<fieldset>
+				<legend>Screen Capture</legend>
+				<button @click="screenCapture">Screen Capture</button>
+			</fieldset>
+
 			<div>select Bitrate</div>
 			<select v-model="selected">
 				<option v-for="(option, idx) in bitrateList" :key="idx" :value="option.value">{{ option.key }}</option>
@@ -168,12 +173,13 @@ export default {
 					};
 				}
 
-				this.recorder = new RecordRTC.RecordRTCPromisesHandler(
-					this.stream,
-					option
-				);
-				this.recorder.startRecording();
+
 			}
+			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
+				this.stream,
+				option
+			);
+			this.recorder.startRecording();
 		},
 		startRecordSaveChunk() {
 			//reset
@@ -269,6 +275,11 @@ export default {
 		},
 		sendMessage() {
 			this.socket.emit("msg", { comment: "hi" });
+		},
+		async screenCapture(){
+			const displayStream = await navigator.mediaDevices.getDisplayMedia({audio:true,video:true});
+			this.stream = displayStream;
+			console.log(displayStream)
 		}
 	},
 	created() {
