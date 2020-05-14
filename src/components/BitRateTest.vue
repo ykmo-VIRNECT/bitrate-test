@@ -1,12 +1,34 @@
 <template>
 	<div>
-		<h1>SampleVideo 720p(1280x720) {{status}}</h1>
+		<h1>SampleVideo 720p(1280x720) {{status}} </h1>
+		<h2 v-if="blobCount > 0">Blob Chunk Count : {{blobCount}}</h2>
 		<div>
-			<button @click="startRecord">start record</button>
-			<button @click="timerRecord">start record(10s)</button>
-			<button @click="startRecord(true)">start timeSliceMode(3s)</button>
-			<button @click="stopRecord">stop record</button>
-			<button @click="sendMessage">sendMessage</button>
+			<fieldset>
+				<legend>Start Record(normal)</legend>
+				<button @click="startRecord">start record</button>
+				<button @click="timerRecord">start record(10s)</button>
+			</fieldset>
+
+			<fieldset>
+				<legend>Start Record(timeslice mode)</legend>
+				<button @click="startRecordSaveChunk()">CLIENT - start timeSliceMode And Devided Chunk</button>
+				<button
+					@click="startRecord($event, timeslice = true, sendServer = false)"
+				>CLIENT - start timeSliceMode And Merge Chunk</button>
+				<button
+					@click="startRecord($event, timeslice = true, sendServer= true)"
+				>SERVER - start timeSliceMode And Merge Chunk</button>
+				timeslice ms
+				<input v-model="timeSliceValue" placeholder="timeslice second(ms)" />
+			</fieldset>
+
+			<fieldset>
+				<legend>Stop</legend>
+				<button @click="stopRecord($event, timeslice = false)">stop record</button>
+				<button @click="stopRecord($event, timeslice = true)">stop timeSliceMode</button>
+				<button @click="sendMessage">sendMessage</button>
+			</fieldset>
+
 			<div>select Bitrate</div>
 			<select v-model="selected">
 				<option v-for="(option, idx) in bitrateList" :key="idx" :value="option.value">{{ option.key }}</option>
@@ -19,17 +41,18 @@
 
 <script>
 import RecordRTC from "recordrtc";
-import io from 'socket.io-client';
- 
+import io from "socket.io-client";
 
 export default {
 	data() {
 		return {
 			stream: null,
 			recorder: null,
-			selected: "",
+			selected: 1000000,
 			status: "Idle",
-			blobArray: [],
+			chunkEnd: false,
+			blobCount: 0,
+			timeSliceValue: 5000,
 			bitrateList: [
 				{
 					key: "16kbit/s - 화상전화 품질",
@@ -72,7 +95,8 @@ export default {
 					value: 4500000
 				}
 			],
-			socket:null
+			socket: null,
+			chunkArray: []
 		};
 	},
 	components: {},
@@ -82,9 +106,18 @@ export default {
 				audio: true,
 				video: { width: 1280, height: 720 }
 			};
-			this.socket = io('http://localhost:8080');
-			this.socket.on('recMsg', function (data) {
-				console.log(data.comment)
+			this.socket = io("http://localhost:8080");
+			this.socket.on("recMsg", function(data) {
+				console.log(data.comment);
+			});
+			this.socket.on("recMedia", function(data) {
+				console.log(data.media);
+
+				let blob = new Blob([data.media], {
+					tpye: "video/x-matroska;codecs=avc1,opus"
+				});
+
+				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
 			});
 			try {
 				this.stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -92,8 +125,9 @@ export default {
 				console.log(err);
 			}
 		},
-		startRecord(timeSliceMode) {
+		startRecord($event, timeSliceMode, sendServer) {
 			this.status = "Recording";
+			this.chunkEnd = false;
 			let option = {
 				type: "video",
 				bitsPerSecond: this.selected,
@@ -101,29 +135,90 @@ export default {
 			};
 
 			if (timeSliceMode) {
-				option.timeSlice = 3000;
+				option.timeSlice = Number.parseInt(this.timeSliceValue,10);
 				option.onTimeStamp = timestamp => {
 					console.log(timestamp);
 				};
 
-				option.ondataavailable = function(blob) {
-					RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
-				};
+				if (sendServer) {
+					option.ondataavailable = blob => {
+						console.log("ondataavailable blob:: ", blob);
+						if (this.status === "Stopped") {
+							this.chunkEnd = true;
+						}
+						this.socket.emit("media_chunk", {
+							chunkIndex: this.blobCount,
+							chunk: blob,
+							isEnd: this.chunkEnd
+						});
+						this.blobCount++;
+					};
+				} else {
+					option.ondataavailable = blob => {
+						this.chunkArray.push(blob);
+						this.blobCount++;
+					};
+				}
+
+				this.recorder = new RecordRTC.RecordRTCPromisesHandler(
+					this.stream,
+					option
+				);
+				this.recorder.startRecording();
 			}
+		},
+		startRecordSaveChunk() {
+
+			//reset
+			this.status = "Recording";
+			this.chunkEnd = false;
+			this.blobCount = 0;
+
+			let option = {
+				type: "video",
+				bitsPerSecond: this.selected,
+				mimeType: "video/webm"
+			};
+
+			option.timeSlice = Number.parseInt(this.timeSliceValue,10);
+			option.onTimeStamp = timestamp => {
+				console.log(timestamp);
+			};
+
+			option.ondataavailable = blob => {
+				console.log("ondataavailable blob:: ", blob);
+
+				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+				this.blobCount++;
+			};
+
 			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
 				this.stream,
 				option
 			);
 			this.recorder.startRecording();
 		},
-		async stopRecord() {
+		async stopRecord($event, timeSliceMode) {
+			console.log("stopRecord called :: timeSliceMode ", timeSliceMode);
 			this.status = "Stopped";
+
 			await this.recorder.stopRecording();
-			let blob = await this.recorder.getBlob();
 
-			RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+			if (!timeSliceMode) {
+				let blob = await this.recorder.getBlob();
+				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+			}
 
-			this.status = "idle";
+			if (this.chunkArray.length > 0) {
+				var blob = new File(this.chunkArray, "video.webm", {
+					type: "video/webm"
+				});
+
+				RecordRTC.invokeSaveAsDialog(
+					blob,
+					"test : bitrate" + this.selected
+				);
+			}
 		},
 		async timerRecord() {
 			this.startRecord();
@@ -131,10 +226,9 @@ export default {
 			await sleep(10000);
 			this.stopRecord();
 		},
-		sendMessage(){
-			this.socket.emit("msg", {comment: 'hi'});
+		sendMessage() {
+			this.socket.emit("msg", { comment: "hi" });
 		}
-		
 	},
 	created() {
 		this.init();
