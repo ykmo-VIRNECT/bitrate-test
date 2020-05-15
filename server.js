@@ -28,6 +28,15 @@ const csvWriter = createCsvWriter({
   ],
 });
 
+const csvWriterClient = createCsvWriter({
+  path: "cilent.csv",
+  header: [
+    { id: "jsHeapSizeLimit", title: "jsHeapSizeLimit" },
+    { id: "totalJSHeapSize", title: "totalJSHeapSize" },
+    { id: "usedJSHeapSize", title: "usedJSHeapSize" },
+  ],
+});
+
 const io = require("socket.io")(server);
 io.on("connection", function(socket) {
   console.log("connect");
@@ -36,6 +45,17 @@ io.on("connection", function(socket) {
   socket.on("msg", function(data) {
     console.log(data);
     socket.emit("recMsg", { comment: instanceId + ":" + data.comment + "\n" });
+  });
+
+  socket.on("client_memory_stats", function(data) {
+    console.log(data);
+    csvWriterClient.writeRecords([
+      {
+        jsHeapSizeLimit: data.jsHeapSizeLimit,
+        totalJSHeapSize: data.totalJSHeapSize,
+        usedJSHeapSize: data.usedJSHeapSize,
+      },
+    ]).then(() => {});
   });
 
   socket.on("media_chunk", function(data) {
@@ -47,23 +67,21 @@ io.on("connection", function(socket) {
     }
 
     console.log("chunk count", buffer.length);
-    // console.log(process.cpuUsage());
-    // console.log(process.memoryUsage());
     const cpu = process.cpuUsage();
     const memory = process.memoryUsage();
 
     csvWriter
-      .writeRecords([{
-        chunkNum: buffer.length,
-        user:cpu.user,
-        system:cpu.system,
-        rss:memory.rss,
-        heapTotal:memory.heapTotal,
-        heapUsed:memory.heapUsed,
-        external:memory.external
-      }]) // returns a promise
-      .then(() => {
-        
-      });
+      .writeRecords([
+        {
+          chunkNum: buffer.length,
+          user: cpu.user,
+          system: cpu.system,
+          rss: memory.rss,
+          heapTotal: memory.heapTotal,
+          heapUsed: memory.heapUsed,
+          external: memory.external,
+        },
+      ]) // returns a promise
+      .then(() => {});
   });
 });

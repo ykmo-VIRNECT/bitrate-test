@@ -2,7 +2,18 @@
 	<div>
 		<h1>SampleVideo 720p(1280x720) {{status}}</h1>
 		<h2 v-if="blobCount > 0">Blob Chunk Count : {{blobCount}}</h2>
+
 		<div>
+			<fieldset>
+				<legend>Select RecorderType</legend>
+				<button @click="setRecordType($event, 'MediaStreamRecorder')">MediaStreamRecorder</button>
+				<button @click="setRecordType($event, 'StereoAudioRecorder')">StereoAudioRecorder</button>
+				<button @click="setRecordType($event, 'WebAssemblyRecorder')">WebAssemblyRecorder</button>
+				<button @click="setRecordType($event, 'CanvasRecorder')">CanvasRecorder</button>
+				<button @click="setRecordType($event, 'GifRecorder')">GifRecorder</button>
+				<button @click="setRecordType($event, 'WhammyRecorder')">WhammyRecorder</button>
+				<button @click="setRecordType($event, 'MultiStreamRecorder')">MultiStreamRecorder</button>
+			</fieldset>
 			<fieldset>
 				<legend>Start Record(normal)</legend>
 				<button @click="startRecord">start record</button>
@@ -39,6 +50,7 @@
 			<fieldset>
 				<legend>Screen Capture</legend>
 				<button @click="screenCapture">Screen Capture</button>
+				<video autoplay :srcObject.prop="stream" style="width:100px; height:100px"></video>
 			</fieldset>
 
 			<div>select Bitrate</div>
@@ -47,7 +59,7 @@
 			</select>
 		</div>
 
-		<video autoplay :srcObject.prop="stream"></video>
+		<video autoplay :srcObject.prop="cameraStream"></video>
 	</div>
 </template>
 
@@ -58,7 +70,17 @@ import io from "socket.io-client";
 export default {
 	data() {
 		return {
+			recorderType: null,
+			option: {
+				type: "video",
+				//mimeType: "video/webm",
+				canvas: {
+					width: 1280,
+					height: 720
+				}
+			},
 			stream: null,
+			cameraStream: null,
 			recorder: null,
 			selected: 1000000,
 			status: "Idle",
@@ -132,8 +154,12 @@ export default {
 
 				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
 			});
+
+			this.recorderType = RecordRTC.MediaStreamRecorder;
+
 			try {
 				this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+				this.cameraStream = this.stream;
 			} catch (err) {
 				console.log(err);
 			}
@@ -141,20 +167,18 @@ export default {
 		startRecord($event, timeSliceMode, sendServer) {
 			this.status = "Recording";
 			this.chunkEnd = false;
-			let option = {
-				type: "video",
-				bitsPerSecond: this.selected,
-				mimeType: "video/webm"
-			};
+
+			this.option.bitsPerSecond = this.selected;
+			this.option.recorderType = this.recorderType;
 
 			if (timeSliceMode) {
-				option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
-				option.onTimeStamp = timestamp => {
+				this.option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+				this.option.onTimeStamp = timestamp => {
 					console.log(timestamp);
 				};
 
 				if (sendServer) {
-					option.ondataavailable = blob => {
+					this.option.ondataavailable = blob => {
 						console.log("ondataavailable blob:: ", blob);
 						if (this.status === "Stopped") {
 							this.chunkEnd = true;
@@ -167,17 +191,16 @@ export default {
 						this.blobCount++;
 					};
 				} else {
-					option.ondataavailable = blob => {
+					this.option.ondataavailable = blob => {
 						this.chunkArray.push(blob);
 						this.blobCount++;
+						this.sendClientMemoryStatus();
 					};
 				}
-
-
 			}
 			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
 				this.stream,
-				option
+				this.option
 			);
 			this.recorder.startRecording();
 		},
@@ -187,27 +210,24 @@ export default {
 			this.chunkEnd = false;
 			this.blobCount = 0;
 
-			let option = {
-				type: "video",
-				bitsPerSecond: this.selected,
-				mimeType: "video/webm"
-			};
-
-			option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
-			option.onTimeStamp = timestamp => {
+			this.option.bitsPerSecond = this.selected;
+			this.option.recorderType = this.recorderType;
+			this.option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+			this.option.onTimeStamp = timestamp => {
 				console.log(timestamp);
 			};
 
-			option.ondataavailable = blob => {
+			this.option.ondataavailable = blob => {
 				console.log("ondataavailable blob:: ", blob);
 
-				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+				//RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+				RecordRTC.invokeSaveAsDialog(blob, "test");
 				this.blobCount++;
 			};
 
 			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
 				this.stream,
-				option
+				this.option
 			);
 			this.recorder.startRecording();
 		},
@@ -239,18 +259,15 @@ export default {
 		async recordOneHour() {
 			this.status = "Recording";
 			this.chunkEnd = false;
-			let option = {
-				type: "video",
-				bitsPerSecond: this.selected,
-				mimeType: "video/webm"
-			};
+			this.option.bitsPerSecond = this.selected;
+			this.option.recorderType = this.recorderType;
 
-			option.timeSlice = Number.parseInt(60000, 10);
-			option.onTimeStamp = timestamp => {
+			this.option.timeSlice = Number.parseInt(60000, 10);
+			this.option.onTimeStamp = timestamp => {
 				console.log(timestamp);
 			};
 
-			option.ondataavailable = blob => {
+			this.option.ondataavailable = blob => {
 				console.log("ondataavailable blob:: ", blob);
 				if (this.status === "Stopped") {
 					this.chunkEnd = true;
@@ -260,12 +277,13 @@ export default {
 					chunk: blob,
 					isEnd: this.chunkEnd
 				});
+
 				this.blobCount++;
 			};
 
 			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
 				this.stream,
-				option
+				this.option
 			);
 			this.recorder.startRecording();
 
@@ -276,10 +294,46 @@ export default {
 		sendMessage() {
 			this.socket.emit("msg", { comment: "hi" });
 		},
-		async screenCapture(){
-			const displayStream = await navigator.mediaDevices.getDisplayMedia({audio:true,video:true});
+		async screenCapture() {
+			const displayStream = await navigator.mediaDevices.getDisplayMedia({
+				audio: true,
+				video: true
+			});
 			this.stream = displayStream;
-			console.log(displayStream)
+			console.log(displayStream);
+		},
+		sendClientMemoryStatus() {
+			const memory = window.performance.memory;
+			this.socket.emit("client_memory_stats", {
+				jsHeapSizeLimit: memory.jsHeapSizeLimit,
+				totalJSHeapSize: memory.totalJSHeapSize,
+				usedJSHeapSize: memory.usedJSHeapSize
+			});
+		},
+		setRecordType($event, selectedRecordType) {
+			console.log(selectedRecordType);
+			switch (selectedRecordType) {
+				case "MediaStreamRecorder":
+					this.recorderType = RecordRTC.MediaStreamRecorder;
+					break;
+				case "StereoAudioRecorder":
+					this.recorderType = RecordRTC.StereoAudioRecorder;
+					break;
+				case "WebAssemblyRecorder":
+					this.recorderType = RecordRTC.WebAssemblyRecorder;
+					break;
+				case "CanvasRecorder":
+					this.recorderType = RecordRTC.CanvasRecorder;
+					break;
+				case "GifRecorder":
+					this.recorderType = RecordRTC.GifRecorder;
+					break;
+				case "WhammyRecorder":
+					this.recorderType = RecordRTC.WhammyRecorder;
+					break;
+				case "MultiStreamRecorder":
+					this.recorderType = RecordRTC.MultiStreamRecorder;
+			}
 		}
 	},
 	created() {
