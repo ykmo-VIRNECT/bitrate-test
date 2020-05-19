@@ -1,10 +1,27 @@
 <template>
 	<div>
-		<h1>SampleVideo 720p(1280x720) {{status}}</h1>
+		<h1>SampleVideo {{resolution}} {{status}}</h1>
 		<h2 v-if="blobCount > 0">Blob Chunk Count : {{blobCount}}</h2>
 
 		<div>
 			<fieldset>
+				<legend>set width and height</legend>
+				<select v-model="resolution">
+					<option
+						v-for="(option, idx) in resolutionList"
+						:key="idx"
+						:value="option.value"
+					>{{ option.key }}</option>
+				</select>
+			</fieldset>
+
+			<fieldset>
+				<legend>select Bitrate</legend>
+				<select v-model="bitrate">
+					<option v-for="(option, idx) in bitrateList" :key="idx" :value="option.value">{{ option.key }}</option>
+				</select>
+			</fieldset>
+			<!-- <fieldset>
 				<legend>Select RecorderType</legend>
 				<button @click="setRecordType($event, 'MediaStreamRecorder')">MediaStreamRecorder</button>
 				<button @click="setRecordType($event, 'StereoAudioRecorder')">StereoAudioRecorder</button>
@@ -13,11 +30,12 @@
 				<button @click="setRecordType($event, 'GifRecorder')">GifRecorder</button>
 				<button @click="setRecordType($event, 'WhammyRecorder')">WhammyRecorder</button>
 				<button @click="setRecordType($event, 'MultiStreamRecorder')">MultiStreamRecorder</button>
-			</fieldset>
+			</fieldset>-->
 			<fieldset>
 				<legend>Start Record(normal)</legend>
 				<button @click="startRecord">start record</button>
 				<button @click="timerRecord">start record(10s)</button>
+				<button @click="recordWithCustomRes">start record Multi</button>
 			</fieldset>
 
 			<fieldset>
@@ -39,6 +57,7 @@
 				<legend>Stop</legend>
 				<button @click="stopRecord($event, timeslice = false)">stop record</button>
 				<button @click="stopRecord($event, timeslice = true)">stop timeSliceMode</button>
+				<button @click="stopMultiRecorder">stop Multi</button>
 				<button @click="sendMessage">sendMessage</button>
 			</fieldset>
 
@@ -50,16 +69,51 @@
 			<fieldset>
 				<legend>Screen Capture</legend>
 				<button @click="screenCapture">Screen Capture</button>
-				<video autoplay :srcObject.prop="stream" style="width:100px; height:100px"></video>
+				<!-- <video autoplay :srcObject.prop="stream" style="width:100px; height:100px"></video> -->
 			</fieldset>
 
-			<div>select Bitrate</div>
-			<select v-model="selected">
-				<option v-for="(option, idx) in bitrateList" :key="idx" :value="option.value">{{ option.key }}</option>
-			</select>
-		</div>
+			<fieldset>
+				<legend>worker</legend>
+				<video autoplay :srcObject.prop="cameraStream" style="width:640px; height:480px;"></video>
+			</fieldset>
 
-		<video autoplay :srcObject.prop="cameraStream"></video>
+			<fieldset>
+				<legend>Audio Set</legend>
+				<div>
+					1
+					<button @click="play($event,'remoteStream1')">Play</button>
+					<button @click="stop($event,'remoteStream1')">Stop</button>
+					<video
+						src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
+						ref="remoteStream1"
+						style="width:100px; height:100px"
+						loop="true"
+					></video>
+				</div>
+				<div>
+					2
+					<button @click="play($event,'remoteStream2')">Play</button>
+					<button @click="stop($event,'remoteStream2')">Stop</button>
+					<video
+						src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
+						ref="remoteStream2"
+						style="width:100px; height:100px"
+						loop="true"
+					></video>
+				</div>
+				<div>
+					3
+					<button @click="play($event,'remoteStream3')">Play</button>
+					<button @click="stop($event,'remoteStream3')">Stop</button>
+					<video
+						src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+						ref="remoteStream3"
+						style="width:100px; height:100px"
+						loop="true"
+					></video>
+				</div>
+			</fieldset>
+		</div>
 	</div>
 </template>
 
@@ -74,20 +128,45 @@ export default {
 			option: {
 				type: "video",
 				//mimeType: "video/webm",
+
+				//WhammyRecorder에서만 동작하는 옵션임
 				canvas: {
-					width: 1280,
-					height: 720
+					width: 1234,
+					height: 678
 				}
 			},
 			stream: null,
+			audioStream : null,
 			cameraStream: null,
 			recorder: null,
-			selected: 1000000,
+			multiRecorder: null,
+			bitrate: 1000000,
+			resolution: "480p",
+			width: 640,
+			height: 480,
 			status: "Idle",
 			chunkEnd: false,
 			blobCount: 0,
 			timeSliceValue: 5000,
 			endTimer: 0,
+			resolutionList: [
+				{
+					key: "360p - 480 x 360",
+					value: "360p"
+				},
+				{
+					key: "480p - 640 x 480",
+					value: "480p"
+				},
+				{
+					key: "720p - 1280 x 720",
+					value: "720p"
+				},
+				{
+					key: "1080p - 1920 x 1080",
+					value: "1080p"
+				}
+			],
 			bitrateList: [
 				{
 					key: "16kbit/s - 화상전화 품질",
@@ -134,12 +213,42 @@ export default {
 			chunkArray: []
 		};
 	},
+	watch: {
+		resolution: {
+			handler(newRes, oldRes) {
+				const selectedRes = newRes === undefined ? oldRes : newRes;
+
+				switch (selectedRes) {
+					case "360p":
+						this.width = 480;
+						this.height = 360;
+						break;
+					case "480p":
+						this.width = 640;
+						this.height = 480;
+						break;
+					case "720p":
+						this.width = 1280;
+						this.height = 720;
+						break;
+					case "1080p":
+						this.width = 1920;
+						this.height = 1080;
+						break;
+					default:
+						console.log("Wrong Res!!!");
+				}
+			},
+			immediate: true
+		}
+	},
 	components: {},
 	methods: {
 		async init() {
 			const constraints = {
 				audio: true,
-				video: { width: 1280, height: 720 }
+				video: true
+				//video: { width: 1280, height: 720 }
 			};
 			this.socket = io("http://localhost:8080");
 			this.socket.on("recMsg", function(data) {
@@ -152,14 +261,15 @@ export default {
 					tpye: "video/x-matroska;codecs=avc1,opus"
 				});
 
-				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
 			});
 
-			this.recorderType = RecordRTC.MediaStreamRecorder;
+			//this.recorderType = RecordRTC.MediaStreamRecorder;
 
 			try {
 				this.stream = await navigator.mediaDevices.getUserMedia(constraints);
 				this.cameraStream = this.stream;
+				this.audioStream = this.stream;
 			} catch (err) {
 				console.log(err);
 			}
@@ -168,7 +278,7 @@ export default {
 			this.status = "Recording";
 			this.chunkEnd = false;
 
-			this.option.bitsPerSecond = this.selected;
+			this.option.bitsPerSecond = this.bitrate;
 			this.option.recorderType = this.recorderType;
 
 			if (timeSliceMode) {
@@ -210,7 +320,7 @@ export default {
 			this.chunkEnd = false;
 			this.blobCount = 0;
 
-			this.option.bitsPerSecond = this.selected;
+			this.option.bitsPerSecond = this.bitrate;
 			this.option.recorderType = this.recorderType;
 			this.option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
 			this.option.onTimeStamp = timestamp => {
@@ -220,7 +330,7 @@ export default {
 			this.option.ondataavailable = blob => {
 				console.log("ondataavailable blob:: ", blob);
 
-				//RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+				//RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
 				RecordRTC.invokeSaveAsDialog(blob, "test");
 				this.blobCount++;
 			};
@@ -239,7 +349,7 @@ export default {
 
 			if (!timeSliceMode) {
 				let blob = await this.recorder.getBlob();
-				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
 			}
 
 			if (this.chunkArray.length > 0) {
@@ -247,7 +357,7 @@ export default {
 					type: "video/webm"
 				});
 
-				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.selected);
+				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
 			}
 		},
 		async timerRecord() {
@@ -259,7 +369,7 @@ export default {
 		async recordOneHour() {
 			this.status = "Recording";
 			this.chunkEnd = false;
-			this.option.bitsPerSecond = this.selected;
+			this.option.bitsPerSecond = this.bitrate;
 			this.option.recorderType = this.recorderType;
 
 			this.option.timeSlice = Number.parseInt(60000, 10);
@@ -333,7 +443,43 @@ export default {
 					break;
 				case "MultiStreamRecorder":
 					this.recorderType = RecordRTC.MultiStreamRecorder;
+					break;
 			}
+			console.log(this.recorderType);
+		},
+		play($event, refName) {
+			this.$refs[refName].play();
+		},
+		stop($event, refName) {
+			this.$refs[refName].pause();
+		},
+		recordWithCustomRes() {
+
+			this.audioStream.
+			this.multiRecorder = new RecordRTC.MultiStreamRecorder([this.stream, this.audioStream], {
+				video: {
+					width: this.width,
+					height: this.height
+				},
+				bitsPerSecond: this.bitrate,
+				timeSlice: 5000
+				// ondataavailable: blob => {
+				// 	console.log("ondataavailable blob:: ", blob);
+
+				// 	RecordRTC.invokeSaveAsDialog(blob, "test");
+				// 	this.blobCount++;
+				// }
+			});
+
+			console.log(this.multiRecorder);
+			this.multiRecorder.record();
+		},
+		async stopMultiRecorder() {
+			this.multiRecorder.stop(function(blob) {
+				RecordRTC.invokeSaveAsDialog(blob, "test");
+			});
+
+			
 		}
 	},
 	created() {
