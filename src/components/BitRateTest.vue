@@ -1,9 +1,16 @@
 <template>
 	<div>
 		<h1>SampleVideo {{resolution}} {{status}}</h1>
+		<h2>Now Working : {{recLib}}</h2>
 		<h2 v-if="blobCount > 0">Blob Chunk Count : {{blobCount}}</h2>
 
 		<div>
+			<fieldset>
+				<legend>Select Recordr</legend>
+				<button @click="setRecLib($event,'recordrtc')">RecordRTC</button>
+				<button @click="setRecLib($event, 'msr')">streamproc/MediaStreamRecorder</button>
+			</fieldset>
+
 			<fieldset>
 				<legend>set width and height</legend>
 				<select v-model="resolution">
@@ -32,21 +39,34 @@
 				<button @click="setRecordType($event, 'MultiStreamRecorder')">MultiStreamRecorder</button>
 			</fieldset>-->
 			<fieldset>
-				<legend>Start Record(normal)</legend>
-				<button @click="startRecord">start record</button>
+				<legend>Start Record</legend>
+
+				<!-- 영상만 녹화 -->
+				<button @click="videoRecording">영상만 녹화하기</button>
+				<button @click="screenRecording">스크린 녹화하기</button>
+				<!-- <button @click="startRecord">start record</button>
 				<button @click="timerRecord">start record(10s)</button>
-				<button @click="recordWithCustomRes">start record Multi</button>
+				<button @click="recordWithCustomRes">start record Multi</button>-->
 			</fieldset>
 
 			<fieldset>
-				<legend>Start Record(timeslice mode)</legend>
-				<button @click="startRecordSaveChunk()">CLIENT - start timeSliceMode And Devided Chunk</button>
+				<legend>Save Option - TimeSlice에서만 동작하는 옵션</legend>
+				<select v-model="saveOpt">
+					<option v-for="(option, idx) in saveOptList" :key="idx" :value="option.value">{{option.key}}</option>
+				</select>
+			</fieldset>
+
+			<fieldset>
+				<legend>Start Record(Timeslice mode)</legend>
+				<button @click="videoRecording($event, timeslice = true)">영상 녹화 (Timeslice)</button>
+				<button @click="screenRecording($event, timeslice = true)">스크린 녹화 (Timeslice)</button>
+				<!-- <button @click="startRecordSaveChunk()">CLIENT - start timeSliceMode And Devided Chunk</button>
 				<button
 					@click="startRecord($event, timeslice = true, sendServer = false)"
 				>CLIENT - start timeSliceMode And Merge Chunk</button>
 				<button
 					@click="startRecord($event, timeslice = true, sendServer= true)"
-				>SERVER - start timeSliceMode And Merge Chunk</button>
+				>SERVER - start timeSliceMode And Merge Chunk</button>-->
 				timeslice ms
 				<input v-model="timeSliceValue" placeholder="timeslice second(ms)" />
 				end Timer ->
@@ -55,8 +75,8 @@
 
 			<fieldset>
 				<legend>Stop</legend>
-				<button @click="stopRecord($event, timeslice = false)">stop record</button>
-				<button @click="stopRecord($event, timeslice = true)">stop timeSliceMode</button>
+				<!-- <button @click="stopRecord($event, timeslice = false)">stop record</button>
+				<button @click="stopRecord($event, timeslice = true)">stop timeSliceMode</button>-->
 				<button @click="stopMultiRecorder">stop Multi</button>
 				<button @click="sendMessage">sendMessage</button>
 			</fieldset>
@@ -68,8 +88,7 @@
 
 			<fieldset>
 				<legend>Screen Capture</legend>
-				<button @click="screenCapture">Screen Capture</button>
-				<!-- <video autoplay :srcObject.prop="stream" style="width:100px; height:100px"></video> -->
+				<button @click="setScreenCapture">Screen Capture</button>
 			</fieldset>
 
 			<fieldset>
@@ -88,6 +107,7 @@
 						ref="remoteStream1"
 						style="width:100px; height:100px"
 						loop="true"
+						crossorigin="anonymous"
 					></video>
 				</div>
 				<div>
@@ -99,6 +119,7 @@
 						ref="remoteStream2"
 						style="width:100px; height:100px"
 						loop="true"
+						crossorigin="anonymous"
 					></video>
 				</div>
 				<div>
@@ -110,6 +131,7 @@
 						ref="remoteStream3"
 						style="width:100px; height:100px"
 						loop="true"
+						crossorigin="anonymous"
 					></video>
 				</div>
 			</fieldset>
@@ -121,10 +143,14 @@
 import RecordRTC from "recordrtc";
 import io from "socket.io-client";
 
+import MSR from "msr";
+
 export default {
 	data() {
 		return {
+			recLib: "recordrtc",
 			recorderType: null,
+
 			option: {
 				type: "video",
 				//mimeType: "video/webm",
@@ -136,7 +162,7 @@ export default {
 				}
 			},
 			stream: null,
-			audioStream : null,
+			audioStream: null,
 			cameraStream: null,
 			recorder: null,
 			multiRecorder: null,
@@ -149,6 +175,7 @@ export default {
 			blobCount: 0,
 			timeSliceValue: 5000,
 			endTimer: 0,
+			saveOpt: "",
 			resolutionList: [
 				{
 					key: "360p - 480 x 360",
@@ -207,6 +234,20 @@ export default {
 				{
 					key: "4.5Mbit/s - YouTube 1280p",
 					value: 4500000
+				}
+			],
+			saveOptList: [
+				{
+					key: "파일로 저장하기",
+					value: "file"
+				},
+				{
+					key: "배열에 담았다가 한방에 내려받기",
+					value: "array"
+				},
+				{
+					key: "indexed db에 저장하기(미구현)",
+					value: "idb"
 				}
 			],
 			socket: null,
@@ -269,7 +310,7 @@ export default {
 			try {
 				this.stream = await navigator.mediaDevices.getUserMedia(constraints);
 				this.cameraStream = this.stream;
-				this.audioStream = this.stream;
+				//this.audioStream = this.stream;
 			} catch (err) {
 				console.log(err);
 			}
@@ -404,14 +445,7 @@ export default {
 		sendMessage() {
 			this.socket.emit("msg", { comment: "hi" });
 		},
-		async screenCapture() {
-			const displayStream = await navigator.mediaDevices.getDisplayMedia({
-				audio: true,
-				video: true
-			});
-			this.stream = displayStream;
-			console.log(displayStream);
-		},
+
 		sendClientMemoryStatus() {
 			const memory = window.performance.memory;
 			this.socket.emit("client_memory_stats", {
@@ -454,32 +488,243 @@ export default {
 			this.$refs[refName].pause();
 		},
 		recordWithCustomRes() {
+			const stream1 = this.$refs["remoteStream1"].captureStream();
+			const stream2 = this.$refs["remoteStream2"].captureStream();
+			const stream3 = this.$refs["remoteStream3"].captureStream();
 
-			this.audioStream.
-			this.multiRecorder = new RecordRTC.MultiStreamRecorder([this.stream, this.audioStream], {
+			console.log(stream1.getAudioTracks());
+			console.log(stream2.getAudioTracks());
+			console.log(stream3.getAudioTracks());
+
+			const audioStream1 = new MediaStream();
+			const audioStream2 = new MediaStream();
+			const audioStream3 = new MediaStream();
+			const workerStream = new MediaStream();
+
+			audioStream1.addTrack(stream1.getAudioTracks()[0]);
+			audioStream2.addTrack(stream2.getAudioTracks()[0]);
+			audioStream3.addTrack(stream3.getAudioTracks()[0]);
+			workerStream.addTrack(this.audioStream.getAudioTracks()[0]);
+
+			this.multiRecorder = new RecordRTC.MultiStreamRecorder(
+				[this.stream, workerStream, audioStream1, audioStream2, audioStream3],
+				{
+					video: {
+						width: this.width,
+						height: this.height
+					},
+					mimeType: "video/webm;codecs=vp9",
+					bitsPerSecond: this.bitrate,
+					timeSlice: 5000,
+
+					frameRate: 60
+					// ondataavailable: blob => {
+					// 	console.log("ondataavailable blob:: ", blob);
+
+					// 	RecordRTC.invokeSaveAsDialog(blob, "test");
+					// 	this.blobCount++;
+					// }
+				}
+			);
+
+			this.multiRecorder.record();
+		},
+		async stopMultiRecorder() {
+			console.log("stopMultiRecorder called");
+
+			const stopCallback = this.getMultiRecorderStopCallBack(this.saveOpt);
+			this.multiRecorder.stop(stopCallback);
+		},
+
+		videoRecording($event, timeslice) {
+			console.log("Record start videoRecording");
+
+			const streamArray = this.getStreamArray();
+			const option = {
 				video: {
 					width: this.width,
 					height: this.height
 				},
-				bitsPerSecond: this.bitrate,
-				timeSlice: 5000
-				// ondataavailable: blob => {
-				// 	console.log("ondataavailable blob:: ", blob);
+				mimeType: "video/webm;codecs=vp9",
+				bitsPerSecond: this.bitrate
+			};
 
-				// 	RecordRTC.invokeSaveAsDialog(blob, "test");
-				// 	this.blobCount++;
-				// }
-			});
+			if (timeslice) {
+				if (this.saveOpt === "") {
+					alert("Save Option을 먼저 지정해주세요");
+					return;
+				}
+				option.ondataavailable = this.getOndataavailable(this.saveOpt);
+				option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+			}
 
-			console.log(this.multiRecorder);
-			this.multiRecorder.record();
+			switch (this.recLib) {
+				case "recordrtc":
+					this.multiRecorder = new RecordRTC.MultiStreamRecorder(
+						streamArray,
+						option
+					);
+					this.multiRecorder.record();
+					break;
+				case "msr":
+					console.log(streamArray)
+					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
+
+					if (timeslice) {
+						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
+					} else {
+						this.multiRecorder.start();
+					}
+
+					break;
+				default:
+					console.log("wrong rec lib");
+					break;
+			}
 		},
-		async stopMultiRecorder() {
-			this.multiRecorder.stop(function(blob) {
-				RecordRTC.invokeSaveAsDialog(blob, "test");
-			});
+		async screenRecording($event, timeslice) {
+			const option = {
+				video: {
+					width: this.width,
+					height: this.height
+				},
+				mimeType: "video/webm;codecs=vp9",
+				bitsPerSecond: this.bitrate
+			};
 
-			
+			if (timeslice) {
+				if (this.saveOpt === "") {
+					alert("Save Option을 먼저 지정해주세요");
+					return;
+				}
+				option.ondataavailable = this.getOndataavailable(this.saveOpt);
+				option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+			}
+
+			await this.setScreenCapture();
+
+			console.log("Record start screenRecording");
+			const streamArray = this.getStreamArray("screen");
+
+			switch (this.recLib) {
+				case "recordrtc":
+					this.multiRecorder = new RecordRTC.MultiStreamRecorder(
+						streamArray,
+						option
+					);
+					this.multiRecorder.record();
+					break;
+				case "msr":
+					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
+
+					if (timeslice) {
+						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
+					} else {
+						this.multiRecorder.start();
+					}
+
+					break;
+				default:
+					console.log("wrong rec lib");
+					break;
+			}
+		},
+
+		getMultiRecorderStopCallBack(saveOpt) {
+			let stopCallback = () => {};
+
+			if (saveOpt === "file") {
+				//아무것도 하지 않음
+				return stopCallback;
+			} else if (saveOpt === "array") {
+				stopCallback = () => {
+					if (this.chunkArray.length > 0) {
+						var blob = new File(this.chunkArray, "video.webm", {
+							type: "video/webm"
+						});
+						RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
+					}
+				};
+			} else if (saveOpt === "idb") {
+				console.log("stopCallback idb ");
+			} else {
+				stopCallback = blob => {
+					RecordRTC.invokeSaveAsDialog(blob, "test");
+				};
+			}
+
+			return stopCallback;
+		},
+
+		getOndataavailable(saveOpt) {
+			let ondataavailable = blob => {
+				console.log(blob);
+			};
+
+			if (saveOpt === "file") {
+				ondataavailable = blob => {
+					RecordRTC.invokeSaveAsDialog(blob, "test");
+					this.blobCount++;
+				};
+			} else if (saveOpt === "array") {
+				ondataavailable = blob => {
+					this.chunkArray.push(blob);
+					this.blobCount++;
+				};
+			} else if (saveOpt === "idb") {
+				console.log("save idb ");
+			}
+			return ondataavailable;
+		},
+		/**
+		 * 스트림 배열을 리턴합니다.
+		 */
+		getStreamArray(recordMode) {
+			const streamArray = [];
+
+			const remoteSream1 = this.$refs["remoteStream1"].captureStream();
+			const remoteSream2 = this.$refs["remoteStream2"].captureStream();
+			const remoteSream3 = this.$refs["remoteStream3"].captureStream();
+
+			console.log(remoteSream1.getAudioTracks());
+			console.log(remoteSream2.getAudioTracks());
+			console.log(remoteSream3.getAudioTracks());
+
+			const remoteAudioStream1 = new MediaStream();
+			const remoteAudioStream2 = new MediaStream();
+			const remoteAudioStream3 = new MediaStream();
+
+			const screenAudioStream = new MediaStream();
+
+			remoteAudioStream1.addTrack(remoteSream1.getAudioTracks()[0]);
+			remoteAudioStream2.addTrack(remoteSream2.getAudioTracks()[0]);
+			remoteAudioStream3.addTrack(remoteSream3.getAudioTracks()[0]);
+
+			//스크린 캡쳐는 오디오를 별도로 스트림에 추가해주어야한다.
+			//스트린 캡쳐시 별도로 녹음이 안되기 때문
+			screenAudioStream.addTrack(this.cameraStream.getAudioTracks()[0]);
+
+			streamArray.push(this.stream);
+			streamArray.push(remoteAudioStream1);
+			streamArray.push(remoteAudioStream2);
+			streamArray.push(remoteAudioStream3);
+
+			if (recordMode === "screen") {
+				streamArray.push(screenAudioStream);
+			}
+
+			return streamArray;
+		},
+		async setScreenCapture() {
+			const displayStream = await navigator.mediaDevices.getDisplayMedia({
+				audio: true,
+				video: true
+			});
+			this.stream = displayStream;
+			console.log(displayStream);
+		},
+		setRecLib($event, lib) {
+			this.recLib = lib;
 		}
 	},
 	created() {
