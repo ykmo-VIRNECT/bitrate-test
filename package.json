@@ -11,11 +11,13 @@
   "dependencies": {
     "core-js": "^3.6.4",
     "csv-writer": "^1.6.0",
+    "dexie": "^3.0.1",
     "express": "^4.17.1",
     "multistreamsmixer": "^1.2.2",
     "recordrtc": "^5.5.9",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0",
+    "uuid": "^8.1.0",
     "vue": "^2.6.11"
   },
   "devDependencies": {
