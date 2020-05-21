@@ -152,6 +152,8 @@ export default {
 			recLib: "recordrtc",
 			recorderType: null,
 
+			msrObj:{},
+
 			option: {
 				type: "video",
 				//mimeType: "video/webm",
@@ -162,8 +164,8 @@ export default {
 					height: 678
 				}
 			},
-			mimeType: "video/mp4;codecs=vp9",
-			fileName:"test.mp4",
+			mimeType: "video/webm;codecs=vp9",
+			fileName: "test.mp4",
 			stream: null,
 			audioStream: null,
 			cameraStream: null,
@@ -526,16 +528,21 @@ export default {
 			this.multiRecorder.record();
 		},
 
-		async stopMultiRecorder() {
+		stopMultiRecorder() {
 			this.status = "Stopped";
 
 			const stopCallback = this.getMultiRecorderStopCallBack(this.saveOpt);
 
 			if (this.recLib === "recordrtc") {
-				await this.multiRecorder.stop(stopCallback);
+				this.multiRecorder.stop(stopCallback);
 			} else if (this.recLib === "msr") {
+				console.log(this.multiRecorder);
+				
 				this.multiRecorder.stop();
+				
 			}
+
+			this.multiRecorder = null;
 		},
 
 		async videoRecording($event, timeslice) {
@@ -587,12 +594,12 @@ export default {
 				if (this.recLib === "recordrtc") {
 					ondataavailable = blob => {
 						console.log("file", blob);
-						RecordRTC.invokeSaveAsDialog(blob, "test");
+						RecordRTC.invokeSaveAsDialog(blob, this.fileName);
 						this.blobCount++;
 					};
 				} else if (this.recLib === "msr") {
 					ondataavailable = blob => {
-						RecordRTC.invokeSaveAsDialog(blob, "test.mp4");
+						RecordRTC.invokeSaveAsDialog(blob, this.fileName);
 						this.blobCount++;
 					};
 				}
@@ -659,6 +666,7 @@ export default {
 		},
 		async startRecorder(recTarget, timeslice) {
 			this.status = "Recording";
+			this.chunkArray = []
 
 			const option = {
 				video: {
@@ -693,9 +701,12 @@ export default {
 					this.multiRecorder.record();
 					break;
 				case "msr":
-					console.log(streamArray);
-
+					
 					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
+					this.multiRecorder.videoBitsPerSecond = this.bitrate
+					this.multiRecorder.bitsPerSecond = this.bitrate
+					this.multiRecorder.mimeType = this.mimeType
+
 
 					if (timeslice) {
 						this.multiRecorder.ondataavailable = this.getOndataavailable(
@@ -707,6 +718,18 @@ export default {
 						this.multiRecorder.onstop = stopCallback;
 						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
 					} else {
+						//msr은 stop() 호출시 ondataavailable가 호출된다.
+						//bug!! msr은 현재 stop 호출하면 ondataavailable이 두번 호출됨
+						this.multiRecorder.ondataavailable = blob => {
+							//RecordRTC.invokeSaveAsDialog(blob, this.fileName);
+							this.chunkArray.push(blob);
+						};
+						this.multiRecorder.onstop = () => {
+							var blob = new File(this.chunkArray, this.fileName, {
+								type: this.mimeType
+							});
+							RecordRTC.invokeSaveAsDialog(blob, this.fileName);
+						};
 						this.multiRecorder.start();
 					}
 
@@ -715,6 +738,8 @@ export default {
 					console.log("wrong rec lib");
 					break;
 			}
+
+			console.log(this.multiRecorder);
 		},
 		checkSaveOpt() {
 			if (this.saveOpt === "") {
