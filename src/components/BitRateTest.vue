@@ -143,7 +143,8 @@
 import RecordRTC from "recordrtc";
 import io from "socket.io-client";
 
-import MSR from "msr";
+import MSR from "../utils/MediaStreamRecorder/MediaStreamRecorder.js";
+//import MSR from "../utils/MediaStreamRecorder.js";
 
 export default {
 	data() {
@@ -567,10 +568,13 @@ export default {
 					this.multiRecorder.record();
 					break;
 				case "msr":
-					console.log(streamArray)
+					console.log(streamArray);
 					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
 
 					if (timeslice) {
+						this.multiRecorder.ondataavailable = this.getOndataavailable(
+							this.saveOpt
+						);
 						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
 					} else {
 						this.multiRecorder.start();
@@ -597,8 +601,8 @@ export default {
 					alert("Save Option을 먼저 지정해주세요");
 					return;
 				}
-				option.ondataavailable = this.getOndataavailable(this.saveOpt);
 				option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+				option.ondataavailable = this.getOndataavailable(this.saveOpt);
 			}
 
 			await this.setScreenCapture();
@@ -618,6 +622,9 @@ export default {
 					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
 
 					if (timeslice) {
+						this.multiRecorder.ondataavailable = this.getOndataavailable(
+							this.saveOpt
+						);
 						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
 					} else {
 						this.multiRecorder.start();
@@ -662,12 +669,22 @@ export default {
 			};
 
 			if (saveOpt === "file") {
-				ondataavailable = blob => {
-					RecordRTC.invokeSaveAsDialog(blob, "test");
-					this.blobCount++;
-				};
+				if (this.recLib === "recordrtc") {
+					ondataavailable = blob => {
+						console.log("file", blob);
+						RecordRTC.invokeSaveAsDialog(blob, "test");
+						this.blobCount++;
+					};
+					
+				} else if (this.recLib === "msr") {
+					ondataavailable = blob => {
+						RecordRTC.invokeSaveAsDialog(blob, "test");
+						this.blobCount++;
+					};
+				}
 			} else if (saveOpt === "array") {
 				ondataavailable = blob => {
+					console.log("array", blob);
 					this.chunkArray.push(blob);
 					this.blobCount++;
 				};
