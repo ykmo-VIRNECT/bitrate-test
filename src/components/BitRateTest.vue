@@ -227,11 +227,11 @@ export default {
 					value: "file"
 				},
 				{
-					key: "배열에 담았다가 한방에 내려받기",
+					key: "배열에 저장",
 					value: "array"
 				},
 				{
-					key: "indexed db에 저장하기(미구현)",
+					key: "indexed db에 저장",
 					value: "idb"
 				}
 			],
@@ -275,7 +275,7 @@ export default {
 
 			this.uuid = uuidv4();
 
-			console.log(await IDBHelper.getMediaChunkArray('e55eaf37-5cdd-461b-b6ba-3bda8b0e9137'))
+			
 
 			const constraints = {
 				audio: true,
@@ -474,7 +474,21 @@ export default {
 					}
 				};
 			} else if (saveOpt === "idb") {
-				console.log("stopCallback idb ");
+				stopCallback = async () => {
+					//indexed db에서 blob 불러옴
+					const queryResult = await IDBHelper.getMediaChunkArray(this.uuid)
+					const blobArray = [];
+
+					queryResult.forEach(record => {
+						blobArray.push(record.blob)
+					});	
+					
+					var blob = new File(blobArray, this.fileName, {
+						type: this.mimeType
+					});
+
+					RecordRTC.invokeSaveAsDialog(blob, this.fileName);
+				}
 			} else {
 				stopCallback = blob => {
 					RecordRTC.invokeSaveAsDialog(blob, this.fileName);

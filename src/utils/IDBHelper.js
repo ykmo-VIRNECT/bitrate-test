@@ -21,6 +21,7 @@ async function addMediaChunk(uuid, chunkNumber, fileName, blob) {
 
 async function getMediaChunkArray(uuid) {
   console.log(uuid)
+
   return await db.mediaChunk
     .where("uuid")
     .equals(uuid)
