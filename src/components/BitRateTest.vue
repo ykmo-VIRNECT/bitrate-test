@@ -162,6 +162,8 @@ export default {
 					height: 678
 				}
 			},
+			mimeType: "video/mp4;codecs=vp9",
+			fileName:"test.mp4",
 			stream: null,
 			audioStream: null,
 			cameraStream: null,
@@ -316,92 +318,91 @@ export default {
 				console.log(err);
 			}
 		},
-		startRecord($event, timeSliceMode, sendServer) {
-			this.status = "Recording";
-			this.chunkEnd = false;
+		// startRecord($event, timeSliceMode, sendServer) {
+		// 	this.status = "Recording";
+		// 	this.chunkEnd = false;
 
-			this.option.bitsPerSecond = this.bitrate;
-			this.option.recorderType = this.recorderType;
+		// 	this.option.bitsPerSecond = this.bitrate;
+		// 	this.option.recorderType = this.recorderType;
 
-			if (timeSliceMode) {
-				this.option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
-				this.option.onTimeStamp = timestamp => {
-					console.log(timestamp);
-				};
+		// 	if (timeSliceMode) {
+		// 		this.option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+		// 		this.option.onTimeStamp = timestamp => {
+		// 			console.log(timestamp);
+		// 		};
 
-				if (sendServer) {
-					this.option.ondataavailable = blob => {
-						console.log("ondataavailable blob:: ", blob);
-						if (this.status === "Stopped") {
-							this.chunkEnd = true;
-						}
-						this.socket.emit("media_chunk", {
-							chunkIndex: this.blobCount,
-							chunk: blob,
-							isEnd: this.chunkEnd
-						});
-						this.blobCount++;
-					};
-				} else {
-					this.option.ondataavailable = blob => {
-						this.chunkArray.push(blob);
-						this.blobCount++;
-						this.sendClientMemoryStatus();
-					};
-				}
-			}
-			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
-				this.stream,
-				this.option
-			);
-			this.recorder.startRecording();
-		},
-		startRecordSaveChunk() {
-			//reset
-			this.status = "Recording";
-			this.chunkEnd = false;
-			this.blobCount = 0;
+		// 		if (sendServer) {
+		// 			this.option.ondataavailable = blob => {
+		// 				console.log("ondataavailable blob:: ", blob);
+		// 				if (this.status === "Stopped") {
+		// 					this.chunkEnd = true;
+		// 				}
+		// 				this.socket.emit("media_chunk", {
+		// 					chunkIndex: this.blobCount,
+		// 					chunk: blob,
+		// 					isEnd: this.chunkEnd
+		// 				});
+		// 				this.blobCount++;
+		// 			};
+		// 		} else {
+		// 			this.option.ondataavailable = blob => {
+		// 				this.chunkArray.push(blob);
+		// 				this.blobCount++;
+		// 				this.sendClientMemoryStatus();
+		// 			};
+		// 		}
+		// 	}
+		// 	this.recorder = new RecordRTC.RecordRTCPromisesHandler(
+		// 		this.stream,
+		// 		this.option
+		// 	);
+		// 	this.recorder.startRecording();
+		// },
+		// startRecordSaveChunk() {
+		// 	//reset
+		// 	this.status = "Recording";
+		// 	this.chunkEnd = false;
+		// 	this.blobCount = 0;
 
-			this.option.bitsPerSecond = this.bitrate;
-			this.option.recorderType = this.recorderType;
-			this.option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
-			this.option.onTimeStamp = timestamp => {
-				console.log(timestamp);
-			};
+		// 	this.option.bitsPerSecond = this.bitrate;
+		// 	this.option.recorderType = this.recorderType;
+		// 	this.option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+		// 	this.option.onTimeStamp = timestamp => {
+		// 		console.log(timestamp);
+		// 	};
 
-			this.option.ondataavailable = blob => {
-				console.log("ondataavailable blob:: ", blob);
+		// 	this.option.ondataavailable = blob => {
+		// 		console.log("ondataavailable blob:: ", blob);
 
-				//RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
-				RecordRTC.invokeSaveAsDialog(blob, "test");
-				this.blobCount++;
-			};
+		// 		//RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
+		// 		RecordRTC.invokeSaveAsDialog(blob, "test");
+		// 		this.blobCount++;
+		// 	};
 
-			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
-				this.stream,
-				this.option
-			);
-			this.recorder.startRecording();
-		},
-		async stopRecord($event, timeSliceMode) {
-			console.log("stopRecord called :: timeSliceMode ", timeSliceMode);
-			this.status = "Stopped";
+		// 	this.recorder = new RecordRTC.RecordRTCPromisesHandler(
+		// 		this.stream,
+		// 		this.option
+		// 	);
+		// 	this.recorder.startRecording();
+		// },
+		// async stopRecord($event, timeSliceMode) {
+		// 	console.log("stopRecord called :: timeSliceMode ", timeSliceMode);
+		// 	this.status = "Stopped";
 
-			await this.recorder.stopRecording();
+		// 	await this.recorder.stopRecording();
 
-			if (!timeSliceMode) {
-				let blob = await this.recorder.getBlob();
-				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
-			}
+		// 	if (!timeSliceMode) {
+		// 		let blob = await this.recorder.getBlob();
+		// 		RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
+		// 	}
 
-			if (this.chunkArray.length > 0) {
-				var blob = new File(this.chunkArray, "video.webm", {
-					type: "video/webm"
-				});
-
-				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
-			}
-		},
+		// 	if (this.chunkArray.length > 0) {
+		// 		var blob = new File(this.chunkArray, "video.webm", {
+		// 			type: "video/webm"
+		// 		});
+		// 		RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
+		// 	}
+		// },
 		async timerRecord() {
 			this.startRecord();
 			const sleep = m => new Promise(r => setTimeout(r, m));
@@ -519,122 +520,33 @@ export default {
 					timeSlice: 5000,
 
 					frameRate: 60
-					// ondataavailable: blob => {
-					// 	console.log("ondataavailable blob:: ", blob);
-
-					// 	RecordRTC.invokeSaveAsDialog(blob, "test");
-					// 	this.blobCount++;
-					// }
 				}
 			);
 
 			this.multiRecorder.record();
 		},
+
 		async stopMultiRecorder() {
-			console.log("stopMultiRecorder called");
+			this.status = "Stopped";
 
 			const stopCallback = this.getMultiRecorderStopCallBack(this.saveOpt);
-			this.multiRecorder.stop(stopCallback);
+
+			if (this.recLib === "recordrtc") {
+				await this.multiRecorder.stop(stopCallback);
+			} else if (this.recLib === "msr") {
+				this.multiRecorder.stop();
+			}
 		},
 
-		videoRecording($event, timeslice) {
+		async videoRecording($event, timeslice) {
 			console.log("Record start videoRecording");
 
-			const streamArray = this.getStreamArray();
-			const option = {
-				video: {
-					width: this.width,
-					height: this.height
-				},
-				mimeType: "video/webm;codecs=vp9",
-				bitsPerSecond: this.bitrate
-			};
-
-			if (timeslice) {
-				if (this.saveOpt === "") {
-					alert("Save Option을 먼저 지정해주세요");
-					return;
-				}
-				option.ondataavailable = this.getOndataavailable(this.saveOpt);
-				option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
-			}
-
-			switch (this.recLib) {
-				case "recordrtc":
-					this.multiRecorder = new RecordRTC.MultiStreamRecorder(
-						streamArray,
-						option
-					);
-					this.multiRecorder.record();
-					break;
-				case "msr":
-					console.log(streamArray);
-					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
-
-					if (timeslice) {
-						this.multiRecorder.ondataavailable = this.getOndataavailable(
-							this.saveOpt
-						);
-						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
-					} else {
-						this.multiRecorder.start();
-					}
-
-					break;
-				default:
-					console.log("wrong rec lib");
-					break;
-			}
+			await this.startRecorder("", timeslice);
 		},
 		async screenRecording($event, timeslice) {
-			const option = {
-				video: {
-					width: this.width,
-					height: this.height
-				},
-				mimeType: "video/webm;codecs=vp9",
-				bitsPerSecond: this.bitrate
-			};
-
-			if (timeslice) {
-				if (this.saveOpt === "") {
-					alert("Save Option을 먼저 지정해주세요");
-					return;
-				}
-				option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
-				option.ondataavailable = this.getOndataavailable(this.saveOpt);
-			}
-
-			await this.setScreenCapture();
-
 			console.log("Record start screenRecording");
-			const streamArray = this.getStreamArray("screen");
 
-			switch (this.recLib) {
-				case "recordrtc":
-					this.multiRecorder = new RecordRTC.MultiStreamRecorder(
-						streamArray,
-						option
-					);
-					this.multiRecorder.record();
-					break;
-				case "msr":
-					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
-
-					if (timeslice) {
-						this.multiRecorder.ondataavailable = this.getOndataavailable(
-							this.saveOpt
-						);
-						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
-					} else {
-						this.multiRecorder.start();
-					}
-
-					break;
-				default:
-					console.log("wrong rec lib");
-					break;
-			}
+			await this.startRecorder("screen", timeslice);
 		},
 
 		getMultiRecorderStopCallBack(saveOpt) {
@@ -644,19 +556,22 @@ export default {
 				//아무것도 하지 않음
 				return stopCallback;
 			} else if (saveOpt === "array") {
+				console.log("callback set array");
 				stopCallback = () => {
+					console.log("stopCallback Called :: array");
 					if (this.chunkArray.length > 0) {
-						var blob = new File(this.chunkArray, "video.webm", {
-							type: "video/webm"
+						var blob = new File(this.chunkArray, this.fileName, {
+							type: this.mimeType
 						});
-						RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
+						console.log("chunkarray blobs::", blob);
+						RecordRTC.invokeSaveAsDialog(blob, this.fileName + this.bitrate);
 					}
 				};
 			} else if (saveOpt === "idb") {
 				console.log("stopCallback idb ");
 			} else {
 				stopCallback = blob => {
-					RecordRTC.invokeSaveAsDialog(blob, "test");
+					RecordRTC.invokeSaveAsDialog(blob, this.fileName);
 				};
 			}
 
@@ -675,10 +590,9 @@ export default {
 						RecordRTC.invokeSaveAsDialog(blob, "test");
 						this.blobCount++;
 					};
-					
 				} else if (this.recLib === "msr") {
 					ondataavailable = blob => {
-						RecordRTC.invokeSaveAsDialog(blob, "test");
+						RecordRTC.invokeSaveAsDialog(blob, "test.mp4");
 						this.blobCount++;
 					};
 				}
@@ -742,6 +656,72 @@ export default {
 		},
 		setRecLib($event, lib) {
 			this.recLib = lib;
+		},
+		async startRecorder(recTarget, timeslice) {
+			this.status = "Recording";
+
+			const option = {
+				video: {
+					width: this.width,
+					height: this.height
+				},
+				mimeType: this.mimeType,
+				bitsPerSecond: this.bitrate
+			};
+
+			if (timeslice) {
+				if (this.checkSaveOpt()) {
+					option.ondataavailable = this.getOndataavailable(this.saveOpt);
+					option.timeSlice = Number.parseInt(this.timeSliceValue, 10);
+				} else {
+					return false;
+				}
+			}
+
+			if (recTarget === "screen") {
+				await this.setScreenCapture();
+			}
+
+			const streamArray = this.getStreamArray();
+
+			switch (this.recLib) {
+				case "recordrtc":
+					this.multiRecorder = new RecordRTC.MultiStreamRecorder(
+						streamArray,
+						option
+					);
+					this.multiRecorder.record();
+					break;
+				case "msr":
+					console.log(streamArray);
+
+					this.multiRecorder = new MSR.MultiStreamRecorder(streamArray, option);
+
+					if (timeslice) {
+						this.multiRecorder.ondataavailable = this.getOndataavailable(
+							this.saveOpt
+						);
+						const stopCallback = this.getMultiRecorderStopCallBack(
+							this.saveOpt
+						);
+						this.multiRecorder.onstop = stopCallback;
+						this.multiRecorder.start(Number.parseInt(this.timeSliceValue, 10));
+					} else {
+						this.multiRecorder.start();
+					}
+
+					break;
+				default:
+					console.log("wrong rec lib");
+					break;
+			}
+		},
+		checkSaveOpt() {
+			if (this.saveOpt === "") {
+				alert("Save Option을 먼저 지정해주세요");
+				return false;
+			}
+			return true;
 		}
 	},
 	created() {
