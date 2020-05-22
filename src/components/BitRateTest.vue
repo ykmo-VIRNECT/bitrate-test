@@ -4,115 +4,142 @@
 		<h2>Now Working : {{recLib}}</h2>
 		<h2 v-if="blobCount > 0">Blob Chunk Count : {{blobCount}}</h2>
 
-		<div>
-			<fieldset>
-				<legend>Select Recordr</legend>
-				<button @click="setRecLib($event,'recordrtc')">RecordRTC</button>
-				<button @click="setRecLib($event, 'msr')">streamproc/MediaStreamRecorder</button>
-			</fieldset>
+		<div class="wrapper">
+			<div>
+				<fieldset>
+					<legend>Select Recordr</legend>
+					<button @click="setRecLib($event,'recordrtc')">RecordRTC</button>
+					<button @click="setRecLib($event, 'msr')">streamproc/MediaStreamRecorder</button>
+				</fieldset>
 
-			<fieldset>
-				<legend>set width and height</legend>
-				<select v-model="resolution">
-					<option
-						v-for="(option, idx) in resolutionList"
-						:key="idx"
-						:value="option.value"
-					>{{ option.key }}</option>
-				</select>
-			</fieldset>
+				<fieldset>
+					<legend>set width and height</legend>
+					<select v-model="resolution">
+						<option
+							v-for="(option, idx) in resolutionList"
+							:key="idx"
+							:value="option.value"
+						>{{ option.key }}</option>
+					</select>
+				</fieldset>
 
-			<fieldset>
-				<legend>select Bitrate</legend>
-				<select v-model="bitrate">
-					<option v-for="(option, idx) in bitrateList" :key="idx" :value="option.value">{{ option.key }}</option>
-				</select>
-			</fieldset>
-			<fieldset>
-				<legend>Start Record</legend>
+				<fieldset>
+					<legend>select Bitrate</legend>
+					<select v-model="bitrate">
+						<option v-for="(option, idx) in bitrateList" :key="idx" :value="option.value">{{ option.key }}</option>
+					</select>
+				</fieldset>
+				<fieldset>
+					<legend>Start Record</legend>
 
-				<!-- 영상만 녹화 -->
-				<button @click="videoRecording">영상만 녹화하기</button>
-				<button @click="screenRecording">스크린 녹화하기</button>
-			</fieldset>
+					<!-- 영상만 녹화 -->
+					<button @click="videoRecording">영상만 녹화하기</button>
+					<button @click="screenRecording">스크린 녹화하기</button>
+				</fieldset>
 
-			<fieldset>
-				<legend>Save Option - TimeSlice에서만 동작하는 옵션</legend>
-				<select v-model="saveOpt">
-					<option v-for="(option, idx) in saveOptList" :key="idx" :value="option.value">{{option.key}}</option>
-				</select>
-			</fieldset>
+				<fieldset>
+					<legend>Save Option - TimeSlice에서만 동작하는 옵션</legend>
+					<select v-model="saveOpt">
+						<option v-for="(option, idx) in saveOptList" :key="idx" :value="option.value">{{option.key}}</option>
+					</select>
+				</fieldset>
 
-			<fieldset>
-				<legend>Start Record(Timeslice mode)</legend>
-				<button @click="videoRecording($event, timeslice = true)">영상 녹화 (Timeslice)</button>
-				<button @click="screenRecording($event, timeslice = true)">스크린 녹화 (Timeslice)</button>
-				timeslice ms
-				<input v-model="timeSliceValue" placeholder="timeslice second(ms)" />
-				end Timer ->
-				<input v-model="endTimer" placeholder="end timer" />
-			</fieldset>
+				<fieldset>
+					<legend>Start Record(Timeslice mode)</legend>
+					<button @click="videoRecording($event, timeslice = true)">영상 녹화 (Timeslice)</button>
+					<button @click="screenRecording($event, timeslice = true)">스크린 녹화 (Timeslice)</button>
+					timeslice ms
+					<input v-model="timeSliceValue" placeholder="timeslice second(ms)" />
+					end Timer ->
+					<input v-model="endTimer" placeholder="end timer" />
+				</fieldset>
 
-			<fieldset>
-				<legend>Stop</legend>
-				<button @click="stopMultiRecorder">stop Multi</button>
-				<button @click="sendMessage">sendMessage</button>
-			</fieldset>
+				<fieldset>
+					<legend>Stop</legend>
+					<button @click="stopMultiRecorder">stop Multi</button>
+					<button @click="sendMessage">sendMessage</button>
+				</fieldset>
 
-			<fieldset>
-				<legend>Special Button</legend>
-				<button @click="recordOneHour">Record One Hour</button>
-			</fieldset>
+				<!-- <fieldset>
+					<legend>Special Button</legend>
+					<button @click="recordOneHour">Record One Hour</button>
+				</fieldset> -->
 
-			<fieldset>
-				<legend>Screen Capture</legend>
-				<button @click="setScreenCapture">Screen Capture</button>
-			</fieldset>
+				<div class="wrapper">
+					<fieldset>
+						<legend>worker</legend>
+						<div>
+							<button @click="toggleWorkerVideo()">Toggle Video</button>
+							<button @click="toggleWorkerSound()">Toggle Audio</button>
+						</div>
+						<video
+							ref="workerStream"
+							autoplay
+							:srcObject.prop="cameraStream"
+							style="width:640px; height:480px;"
+						></video>
+					</fieldset>
 
-			<fieldset>
-				<legend>worker</legend>
-				<video autoplay :srcObject.prop="cameraStream" style="width:640px; height:480px;"></video>
-			</fieldset>
-
-			<fieldset>
-				<legend>Audio Set</legend>
-				<div>
-					1
-					<button @click="play($event,'remoteStream1')">Play</button>
-					<button @click="stop($event,'remoteStream1')">Stop</button>
-					<video
-						src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-						ref="remoteStream1"
-						style="width:100px; height:100px"
-						loop="true"
-						crossorigin="anonymous"
-					></video>
+					<fieldset>
+						<legend>Audio Set</legend>
+						<div>
+							1
+							<button @click="play($event,'remoteStream1')">Play</button>
+							<button @click="stop($event,'remoteStream1')">Stop</button>
+							<!-- <button @click="toggleRemoteVideo($event,'remoteStream1')">Toggle Video</button> -->
+							<button @click="toggleRemoteSound($event,'remoteStream1')">Toggle Audio</button>
+							<video
+								src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4"
+								ref="remoteStream1"
+								style="width:100px; height:100px"
+								loop="true"
+								crossorigin="anonymous"
+							></video>
+						</div>
+						<div>
+							2
+							<button @click="play($event,'remoteStream2')">Play</button>
+							<button @click="stop($event,'remoteStream2')">Stop</button>
+							<!-- <button @click="toggleRemoteVideo($event,'remoteStream2')">Toggle Video</button> -->
+							<button @click="toggleRemoteSound($event,'remoteStream2')">Toggle Audio</button>
+							<video
+								src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
+								ref="remoteStream2"
+								style="width:100px; height:100px"
+								loop="true"
+								crossorigin="anonymous"
+							></video>
+						</div>
+						<div>
+							3
+							<button @click="play($event,'remoteStream3')">Play</button>
+							<button @click="stop($event,'remoteStream3')">Stop</button>
+							<!-- <button @click="toggleRemoteVideo($event,'remoteStream3')">Toggle Video</button> -->
+							<button @click="toggleRemoteSound($event,'remoteStream3')">Toggle Audio</button>
+							<video
+								src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+								ref="remoteStream3"
+								style="width:100px; height:100px"
+								loop="true"
+								crossorigin="anonymous"
+							></video>
+						</div>
+					</fieldset>
 				</div>
-				<div>
-					2
-					<button @click="play($event,'remoteStream2')">Play</button>
-					<button @click="stop($event,'remoteStream2')">Stop</button>
-					<video
-						src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
-						ref="remoteStream2"
-						style="width:100px; height:100px"
-						loop="true"
-						crossorigin="anonymous"
-					></video>
-				</div>
-				<div>
-					3
-					<button @click="play($event,'remoteStream3')">Play</button>
-					<button @click="stop($event,'remoteStream3')">Stop</button>
-					<video
-						src="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
-						ref="remoteStream3"
-						style="width:100px; height:100px"
-						loop="true"
-						crossorigin="anonymous"
-					></video>
-				</div>
-			</fieldset>
+			</div>
+			<div>
+				<fieldset>
+					<legend>Status</legend>
+					<h3>Worker Video : {{workerVideoStatus}}</h3>
+					<h3>Worker Audio : {{workerAudioStatus}}</h3>
+					<br />
+					<h3>Remote Stream1 Audio : {{remote1AudioStatus}}</h3>
+					<br />
+					<h3>Remote Stream2 Audio : {{remote2AudioStatus}}</h3>
+					<br />
+					<h3>Remote Stream3 Audio : {{remote3AudioStatus}}</h3>
+				</fieldset>
+			</div>
 		</div>
 	</div>
 </template>
@@ -144,11 +171,30 @@ export default {
 				}
 			},
 			mimeType: "video/webm;codecs=vp9",
+			//mimeType: "video/webm",
 			fileName: "test.mp4",
 			uuid: "",
 			stream: null,
-			audioStream: null,
+			screenStream: null,
 			cameraStream: null,
+
+			//stream status
+			workerVideoStatus: true,
+			workerAudioStatus: true,
+
+			remote1VideoStatus: true,
+			remote1AudioStatus: true,
+
+			remote2VideoStatus: true,
+			remote2AudioStatus: true,
+
+			remote3VideoStatus: true,
+			remote3AudioStatus: true,
+
+			remoteStream1: null,
+			remoteStream2: null,
+			remoteStream3: null,
+
 			recorder: null,
 			multiRecorder: null,
 			bitrate: 1000000,
@@ -233,6 +279,10 @@ export default {
 				{
 					key: "indexed db에 저장",
 					value: "idb"
+				},
+				{
+					key: "FileSystem에 저장",
+					value: "idb"
 				}
 			],
 			socket: null,
@@ -272,10 +322,7 @@ export default {
 	methods: {
 		async init() {
 			IDBHelper.initIDB();
-
 			this.uuid = uuidv4();
-
-			
 
 			const constraints = {
 				audio: true,
@@ -295,12 +342,14 @@ export default {
 				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
 			});
 
-			//this.recorderType = RecordRTC.MediaStreamRecorder;
-
 			try {
-				this.stream = await navigator.mediaDevices.getUserMedia(constraints);
-				this.cameraStream = this.stream;
-				//this.audioStream = this.stream;
+				this.cameraStream = await navigator.mediaDevices.getUserMedia(
+					constraints
+				);
+
+				this.remoteStream1 = this.$refs["remoteStream1"].captureStream();
+				this.remoteStream2 = this.$refs["remoteStream2"].captureStream();
+				this.remoteStream3 = this.$refs["remoteStream3"].captureStream();
 			} catch (err) {
 				console.log(err);
 			}
@@ -311,41 +360,41 @@ export default {
 			await sleep(10000);
 			this.stopRecord();
 		},
-		async recordOneHour() {
-			this.status = "Recording";
-			this.chunkEnd = false;
-			this.option.bitsPerSecond = this.bitrate;
-			this.option.recorderType = this.recorderType;
+		// async recordOneHour() {
+		// 	this.status = "Recording";
+		// 	this.chunkEnd = false;
+		// 	this.option.bitsPerSecond = this.bitrate;
+		// 	this.option.recorderType = this.recorderType;
 
-			this.option.timeSlice = Number.parseInt(60000, 10);
-			this.option.onTimeStamp = timestamp => {
-				console.log(timestamp);
-			};
+		// 	this.option.timeSlice = Number.parseInt(60000, 10);
+		// 	this.option.onTimeStamp = timestamp => {
+		// 		console.log(timestamp);
+		// 	};
 
-			this.option.ondataavailable = blob => {
-				console.log("ondataavailable blob:: ", blob);
-				if (this.status === "Stopped") {
-					this.chunkEnd = true;
-				}
-				this.socket.emit("media_chunk", {
-					chunkIndex: this.blobCount,
-					chunk: blob,
-					isEnd: this.chunkEnd
-				});
+		// 	this.option.ondataavailable = blob => {
+		// 		console.log("ondataavailable blob:: ", blob);
+		// 		if (this.status === "Stopped") {
+		// 			this.chunkEnd = true;
+		// 		}
+		// 		this.socket.emit("media_chunk", {
+		// 			chunkIndex: this.blobCount,
+		// 			chunk: blob,
+		// 			isEnd: this.chunkEnd
+		// 		});
 
-				this.blobCount++;
-			};
+		// 		this.blobCount++;
+		// 	};
 
-			this.recorder = new RecordRTC.RecordRTCPromisesHandler(
-				this.stream,
-				this.option
-			);
-			this.recorder.startRecording();
+		// 	this.recorder = new RecordRTC.RecordRTCPromisesHandler(
+		// 		this.stream,
+		// 		this.option
+		// 	);
+		// 	this.recorder.startRecording();
 
-			const sleep = m => new Promise(r => setTimeout(r, m));
-			await sleep(3600000);
-			this.stopRecord(null, true);
-		},
+		// 	const sleep = m => new Promise(r => setTimeout(r, m));
+		// 	await sleep(3600000);
+		// 	this.stopRecord(null, true);
+		// },
 		sendMessage() {
 			this.socket.emit("msg", { comment: "hi" });
 		},
@@ -390,42 +439,6 @@ export default {
 		},
 		stop($event, refName) {
 			this.$refs[refName].pause();
-		},
-		recordWithCustomRes() {
-			const stream1 = this.$refs["remoteStream1"].captureStream();
-			const stream2 = this.$refs["remoteStream2"].captureStream();
-			const stream3 = this.$refs["remoteStream3"].captureStream();
-
-			console.log(stream1.getAudioTracks());
-			console.log(stream2.getAudioTracks());
-			console.log(stream3.getAudioTracks());
-
-			const audioStream1 = new MediaStream();
-			const audioStream2 = new MediaStream();
-			const audioStream3 = new MediaStream();
-			const workerStream = new MediaStream();
-
-			audioStream1.addTrack(stream1.getAudioTracks()[0]);
-			audioStream2.addTrack(stream2.getAudioTracks()[0]);
-			audioStream3.addTrack(stream3.getAudioTracks()[0]);
-			workerStream.addTrack(this.audioStream.getAudioTracks()[0]);
-
-			this.multiRecorder = new RecordRTC.MultiStreamRecorder(
-				[this.stream, workerStream, audioStream1, audioStream2, audioStream3],
-				{
-					video: {
-						width: this.width,
-						height: this.height
-					},
-					mimeType: "video/webm;codecs=vp9",
-					bitsPerSecond: this.bitrate,
-					timeSlice: 5000,
-
-					frameRate: 60
-				}
-			);
-
-			this.multiRecorder.record();
 		},
 
 		stopMultiRecorder() {
@@ -476,19 +489,19 @@ export default {
 			} else if (saveOpt === "idb") {
 				stopCallback = async () => {
 					//indexed db에서 blob 불러옴
-					const queryResult = await IDBHelper.getMediaChunkArray(this.uuid)
+					const queryResult = await IDBHelper.getMediaChunkArray(this.uuid);
 					const blobArray = [];
 
 					queryResult.forEach(record => {
-						blobArray.push(record.blob)
-					});	
-					
+						blobArray.push(record.blob);
+					});
+
 					var blob = new File(blobArray, this.fileName, {
 						type: this.mimeType
 					});
 
 					RecordRTC.invokeSaveAsDialog(blob, this.fileName);
-				}
+				};
 			} else {
 				stopCallback = blob => {
 					RecordRTC.invokeSaveAsDialog(blob, this.fileName);
@@ -540,16 +553,16 @@ export default {
 		/**
 		 * 스트림 배열을 리턴합니다.
 		 */
-		getStreamArray(recordMode) {
+		getStreamArray(recTarget) {
 			const streamArray = [];
 
-			const remoteSream1 = this.$refs["remoteStream1"].captureStream();
-			const remoteSream2 = this.$refs["remoteStream2"].captureStream();
-			const remoteSream3 = this.$refs["remoteStream3"].captureStream();
+			this.remoteStream1 = this.$refs["remoteStream1"].captureStream();
+			this.remoteStream2 = this.$refs["remoteStream2"].captureStream();
+			this.remoteStream3 = this.$refs["remoteStream3"].captureStream();
 
-			console.log(remoteSream1.getAudioTracks());
-			console.log(remoteSream2.getAudioTracks());
-			console.log(remoteSream3.getAudioTracks());
+			console.log(this.remoteStream1.getAudioTracks());
+			console.log(this.remoteStream2.getAudioTracks());
+			console.log(this.remoteStream3.getAudioTracks());
 
 			const remoteAudioStream1 = new MediaStream();
 			const remoteAudioStream2 = new MediaStream();
@@ -557,20 +570,25 @@ export default {
 
 			const screenAudioStream = new MediaStream();
 
-			remoteAudioStream1.addTrack(remoteSream1.getAudioTracks()[0]);
-			remoteAudioStream2.addTrack(remoteSream2.getAudioTracks()[0]);
-			remoteAudioStream3.addTrack(remoteSream3.getAudioTracks()[0]);
+			remoteAudioStream1.addTrack(this.remoteStream1.getAudioTracks()[0]);
+			remoteAudioStream2.addTrack(this.remoteStream2.getAudioTracks()[0]);
+			remoteAudioStream3.addTrack(this.remoteStream3.getAudioTracks()[0]);
 
 			//스크린 캡쳐는 오디오를 별도로 스트림에 추가해주어야한다.
 			//스트린 캡쳐시 별도로 녹음이 안되기 때문
 			screenAudioStream.addTrack(this.cameraStream.getAudioTracks()[0]);
 
-			streamArray.push(this.stream);
+			if (recTarget === "screen") {
+				streamArray.push(this.screenStream);
+			} else {
+				streamArray.push(this.cameraStream);
+			}
+
 			streamArray.push(remoteAudioStream1);
 			streamArray.push(remoteAudioStream2);
 			streamArray.push(remoteAudioStream3);
 
-			if (recordMode === "screen") {
+			if (recTarget === "screen") {
 				streamArray.push(screenAudioStream);
 			}
 
@@ -581,7 +599,7 @@ export default {
 				audio: true,
 				video: true
 			});
-			this.stream = displayStream;
+			this.screenStream = displayStream;
 			console.log(displayStream);
 		},
 		setRecLib($event, lib) {
@@ -613,7 +631,7 @@ export default {
 				await this.setScreenCapture();
 			}
 
-			const streamArray = this.getStreamArray();
+			const streamArray = this.getStreamArray(recTarget);
 
 			switch (this.recLib) {
 				case "recordrtc":
@@ -653,13 +671,11 @@ export default {
 						};
 						this.multiRecorder.start();
 					}
-
 					break;
 				default:
 					console.log("wrong rec lib");
 					break;
 			}
-
 			console.log(this.multiRecorder);
 		},
 		checkSaveOpt() {
@@ -668,6 +684,62 @@ export default {
 				return false;
 			}
 			return true;
+		},
+		toggleWorkerVideo() {
+			const videoTrack = this.cameraStream.getVideoTracks()[0];
+			videoTrack.enabled = !videoTrack.enabled;
+			this.workerVideoStatus = videoTrack.enabled;
+		},
+		toggleWorkerSound() {
+			const audioTrack = this.cameraStream.getAudioTracks()[0];
+			audioTrack.enabled = !audioTrack.enabled;
+			this.workerAudioStatus = audioTrack.enabled;
+		},
+		toggleRemoteVideo($event, refName) {
+			let videoTrack = null;
+			switch (refName) {
+				case "remoteStream1":
+					videoTrack = this.remoteStream1.getVideoTracks()[0];
+					break;
+				case "remoteStream2":
+					videoTrack = this.remoteStream2.getVideoTracks()[0];
+					break;
+				case "remoteStream3":
+					videoTrack = this.remoteStream3.getVideoTracks()[0];
+					break;
+				default:
+					console.log("Wrong refName");
+					break;
+			}
+			videoTrack.enabled = !videoTrack.enabled;
+			console.log(refName + " videoTrack ::" + videoTrack.enabled);
+		},
+		toggleRemoteSound($event, refName) {
+			let audioTrack = null;
+			this.$refs[refName].muted = !this.$refs[refName].muted;
+
+			//현 시점에서는 필요 없는 코드
+			switch (refName) {
+				case "remoteStream1":
+					audioTrack = this.remoteStream1.getAudioTracks()[0];
+					this.remote1AudioStatus = !this.$refs[refName].muted;
+					break;
+				case "remoteStream2":
+					audioTrack = this.remoteStream2.getAudioTracks()[0];
+					this.remote2AudioStatus = !this.$refs[refName].muted;
+					break;
+				case "remoteStream3":
+					audioTrack = this.remoteStream3.getAudioTracks()[0];
+					this.remote3AudioStatus = !this.$refs[refName].muted;
+					break;
+				default:
+					console.log("Wrong refName");
+					break;
+			}
+			audioTrack.enabled = !audioTrack.enabled;
+
+			console.log(refName + " audioTrack ::" + audioTrack.enabled);
+			console.log(refName + " audioTrack muted ::" + this.$refs[refName].muted);
 		}
 	},
 	created() {
@@ -676,4 +748,8 @@ export default {
 };
 </script>
 
-<style></style>
+<style lang="scss">
+.wrapper {
+	display: flex;
+}
+</style>
