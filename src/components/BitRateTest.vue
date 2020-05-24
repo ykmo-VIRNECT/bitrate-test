@@ -165,10 +165,10 @@ export default {
 				//mimeType: "video/webm",
 
 				//WhammyRecorder에서만 동작하는 옵션임
-				canvas: {
-					width: 1234,
-					height: 678
-				}
+				// canvas: {
+				// 	width: 1234,
+				// 	height: 678
+				// }
 			},
 			mimeType: "video/webm;codecs=vp9",
 			//mimeType: "video/webm",
@@ -198,7 +198,7 @@ export default {
 			recorder: null,
 			multiRecorder: null,
 			bitrate: 1000000,
-			resolution: "480p",
+			resolution: "720p",
 			width: 640,
 			height: 480,
 			status: "Idle",
@@ -280,10 +280,10 @@ export default {
 					key: "indexed db에 저장",
 					value: "idb"
 				},
-				{
-					key: "FileSystem에 저장",
-					value: "idb"
-				}
+				// {
+				// 	key: "FileSystem에 저장",
+				// 	value: "fileSystem""
+				// }
 			],
 			socket: null,
 			chunkArray: []
@@ -444,6 +444,10 @@ export default {
 		stopMultiRecorder() {
 			this.status = "Stopped";
 
+			this.stop('','remoteStream1')
+			this.stop('','remoteStream2')
+			this.stop('','remoteStream3')
+
 			const stopCallback = this.getMultiRecorderStopCallBack(this.saveOpt);
 
 			if (this.recLib === "recordrtc") {
@@ -596,8 +600,11 @@ export default {
 		},
 		async setScreenCapture() {
 			const displayStream = await navigator.mediaDevices.getDisplayMedia({
-				audio: true,
-				video: true
+				video:{
+					width: this.width,
+					height: this.height,
+					frameRate: 60
+				}
 			});
 			this.screenStream = displayStream;
 			console.log(displayStream);
@@ -608,6 +615,10 @@ export default {
 		async startRecorder(recTarget, timeslice) {
 			this.status = "Recording";
 			this.chunkArray = [];
+
+			this.play('','remoteStream1')
+			this.play('','remoteStream2')
+			this.play('','remoteStream3')
 
 			const option = {
 				video: {
@@ -629,7 +640,7 @@ export default {
 
 			if (recTarget === "screen") {
 				await this.setScreenCapture();
-			}
+			} 
 
 			const streamArray = this.getStreamArray(recTarget);
 
