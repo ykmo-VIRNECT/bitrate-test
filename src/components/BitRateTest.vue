@@ -328,19 +328,19 @@ export default {
 				audio: true,
 				video: true
 			};
-			this.socket = io("http://localhost:8080");
-			this.socket.on("recMsg", function(data) {
-				console.log(data.comment);
-			});
-			this.socket.on("recMedia", function(data) {
-				console.log(data.media);
+			// this.socket = io("http://localhost:8080");
+			// this.socket.on("recMsg", function(data) {
+			// 	console.log(data.comment);
+			// });
+			// this.socket.on("recMedia", function(data) {
+			// 	console.log(data.media);
 
-				let blob = new Blob([data.media], {
-					tpye: "video/x-matroska;codecs=avc1,opus"
-				});
+			// 	let blob = new Blob([data.media], {
+			// 		tpye: "video/x-matroska;codecs=avc1,opus"
+			// 	});
 
-				RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
-			});
+			// 	RecordRTC.invokeSaveAsDialog(blob, "test : bitrate" + this.bitrate);
+			// });
 
 			try {
 				this.cameraStream = await navigator.mediaDevices.getUserMedia(
