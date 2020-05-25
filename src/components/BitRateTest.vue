@@ -50,8 +50,8 @@
 					<button @click="screenRecording($event, timeslice = true)">스크린 녹화 (Timeslice)</button>
 					timeslice ms
 					<input v-model="timeSliceValue" placeholder="timeslice second(ms)" />
-					end Timer ->
-					<input v-model="endTimer" placeholder="end timer" />
+					<!-- end Timer ->
+					<input v-model="endTimer" placeholder="end timer" /> -->
 				</fieldset>
 
 				<fieldset>
