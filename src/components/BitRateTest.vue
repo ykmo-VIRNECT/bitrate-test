@@ -355,7 +355,7 @@ export default {
 				console.log(err);
 			}
 		},
-		
+
 		// async recordOneHour() {
 		// 	this.status = "Recording";
 		// 	this.chunkEnd = false;
@@ -622,14 +622,14 @@ export default {
 			this.status = "Recording";
 			this.chunkArray = [];
 			this.recTarget = recTarget;
-			
+			this.blobCount = 0;
 
 			this.play("", "remoteStream1");
 			this.play("", "remoteStream2");
 			this.play("", "remoteStream3");
 
-			if(this.endTimer === 0 && this.endTimerSwitch === true){
-				this.endTimer = 10000
+			if (this.endTimer === 0 && this.endTimerSwitch === true) {
+				this.endTimer = 10000;
 			}
 
 			const option = {
@@ -743,7 +743,7 @@ export default {
 				let id = setInterval(() => {
 					if (end > 0) {
 						end = end - 1000;
-						this.endTimer = end
+						this.endTimer = end;
 						console.log(end);
 					} else {
 						clearInterval(id);
