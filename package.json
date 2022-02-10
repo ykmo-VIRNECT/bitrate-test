@@ -14,7 +14,7 @@
     "dexie": "^3.0.1",
     "express": "^4.17.1",
     "multistreamsmixer": "^1.2.2",
-    "node-sass": "^4.14.1",
+    "node-sass": "^7.0.0",
     "recordrtc": "^5.5.9",
     "sass-loader": "^8.0.2",
     "socket.io": "^2.3.0",
